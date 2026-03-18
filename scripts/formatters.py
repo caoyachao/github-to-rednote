@@ -127,13 +127,35 @@ class RedNoteFormatter:
         if desc:
             lines.append(RedNoteFormatter.truncate_text(desc, 60))
         
-        # Stats line
+        # Stats line - Stars smart display rule
         stars = repo_data.get('stars', 0)
         forks = repo_data.get('forks', 0)
         lang = repo_data.get('language', 'Unknown')
-        lines.append(f"⭐ {stars:,} | 🍴 {forks:,} | 💻 {lang}")
+        
+        stars_str = RedNoteFormatter.format_stars_display(stars)
+        lines.append(f"{stars_str}🍴 {forks:,} | 💻 {lang}" if stars_str else f"🍴 {forks:,} | 💻 {lang}")
         
         return '\n'.join(lines)
+    
+    @staticmethod
+    def format_stars_display(stars: int) -> str:
+        """Format stars count with smart display rule (>= 100 only)."""
+        if stars >= 100:
+            if stars >= 1000:
+                return f"⭐ {stars/1000:.1f}k stars | "
+            else:
+                return f"⭐ {stars} stars | "
+        # stars < 100 不显示
+        return ""
+    
+    @staticmethod
+    def format_repo_stats(stars: int, forks: int, language: str) -> str:
+        """Format repository stats line with smart stars display."""
+        stars_str = RedNoteFormatter.format_stars_display(stars)
+        if stars_str:
+            return f"{stars_str}🍴 {forks:,} | 💻 {language}"
+        else:
+            return f"🍴 {forks:,} | 💻 {language}"
     
     @staticmethod
     def format_stats_box(repo_data: dict) -> str:

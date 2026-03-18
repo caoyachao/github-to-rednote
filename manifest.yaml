@@ -1,6 +1,6 @@
 name: github-to-rednote
-description: Convert GitHub repositories into RedNote style technical articles using OpenClaw's built-in agent capability
-version: 1.1.0
+description: Convert GitHub repositories into RedNote style technical articles with cover image generation
+version: 1.2.0
 author: kevin
 type: skill
 category: content-generation
@@ -11,11 +11,15 @@ tags:
   - content
   - article
   - ai
+  - image-generation
+
+tools:
+  - canvas
 
 commands:
   generate:
-    description: Generate RedNote article from GitHub repository using OpenClaw agent
-    usage: generate URL [--template TYPE] [--style STYLE] [--output FILE] [--clipboard]
+    description: Generate RedNote article from GitHub repository with optional cover image
+    usage: generate URL [--template TYPE] [--style STYLE] [--output FILE] [--with-image] [--image-output DIR]
     args:
       - name: url
         required: true
@@ -31,6 +35,12 @@ commands:
       - name: output
         required: false
         description: Output file path (default stdout)
+      - name: with-image
+        required: false
+        description: Generate RedNote cover image (requires --output)
+      - name: image-output
+        required: false
+        description: Directory for cover image output (default: same as --output directory)
       - name: clipboard
         required: false
         description: Copy output to clipboard
@@ -52,6 +62,7 @@ scripts:
   - scripts/generate_article.py
   - scripts/formatters.py
   - scripts/llm_generator.py
+  - scripts/image_generator.py
   - scripts/test_github_api.py
 
 docs:

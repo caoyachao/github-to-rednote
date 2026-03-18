@@ -447,6 +447,7 @@ class GitHubAPI:
                         include_contributors: bool = True) -> Dict:
         """
         Get complete repository summary for article generation.
+        Enhanced version with README features and selling points extraction.
         
         Returns dict with:
         - url: Original URL
@@ -462,6 +463,8 @@ class GitHubAPI:
         - languages: All languages with bytes
         - topics: Repository topics
         - readme: README content
+        - readme_features: Extracted features from README
+        - selling_points: Key selling points
         - created_at: Creation date
         - updated_at: Last update date
         - pushed_at: Last push date
@@ -470,6 +473,7 @@ class GitHubAPI:
         - size: Repository size (KB)
         - default_branch: Default branch name
         - releases: Recent releases (if include_releases=True)
+        - latest_release: Latest release details
         - contributors: Top contributors (if include_contributors=True)
         - recent_commits: Recent commits
         - archived: Whether repo is archived
@@ -497,9 +501,12 @@ class GitHubAPI:
         
         # Fetch releases
         releases = []
+        latest_release = {}
         if include_releases:
             try:
                 releases = self.get_releases(owner, repo, limit=5)
+                if releases:
+                    latest_release = releases[0]
             except GitHubAPIError:
                 pass
         
@@ -518,6 +525,12 @@ class GitHubAPI:
         except GitHubAPIError:
             pass
         
+        # Extract features from README
+        readme_features = self._extract_readme_features(readme)
+        
+        # Extract selling points
+        selling_points = self._extract_selling_points(readme, info)
+        
         return {
             'url': url,
             'html_url': info.get('html_url', url),
@@ -533,6 +546,8 @@ class GitHubAPI:
             'languages': languages,
             'topics': info.get('topics', []),
             'readme': readme[:15000] if readme else '',  # Limit README size
+            'readme_features': readme_features,
+            'selling_points': selling_points,
             'created_at': info.get('created_at', ''),
             'updated_at': info.get('updated_at', ''),
             'pushed_at': info.get('pushed_at', ''),
@@ -542,12 +557,111 @@ class GitHubAPI:
             'size': info.get('size', 0),
             'default_branch': info.get('default_branch', 'main'),
             'releases': releases,
+            'latest_release': latest_release,
             'contributors': contributors,
             'recent_commits': recent_commits,
             'archived': info.get('archived', False),
             'fork': info.get('fork', False),
             'private': info.get('private', False)
         }
+    
+    def _extract_readme_features(self, readme: str) -> List[str]:
+        """Extract Features section from README."""
+        if not readme:
+            return []
+        
+        features = []
+        
+        # Common patterns for Features section
+        patterns = [
+            # ## Features
+            r'##\s*Features?\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            # ## Key Features
+            r'##\s*Key\s+Features?\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            # ### Features
+            r'###\s*Features?\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            # Features: followed by list
+            r'(?i)^\s*features?:\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            # - Feature: description
+            r'(?i)^\s*[-*]\s*([^\n:]+):\s*[^\n]+\n((?:\s+[-*]\s*[^\n]+\n?)*)',
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, readme, re.MULTILINE)
+            for match in matches:
+                # match might be a string or tuple
+                content = match[0] if isinstance(match, tuple) else match
+                for line in content.strip().split('\n'):
+                    line = line.strip().lstrip('-*•').strip()
+                    if line and len(line) > 5 and len(line) < 200:
+                        # Clean markdown links
+                        line = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)
+                        # Clean inline code markers
+                        line = re.sub(r'`([^`]+)`', r'\1', line)
+                        features.append(line)
+                if features:
+                    break
+            if features:
+                break
+        
+        return features[:10]  # Limit to 10 features
+    
+    def _extract_selling_points(self, readme: str, info: Dict) -> List[str]:
+        """Extract key selling points from repo info and README."""
+        points = []
+        
+        # 1. High stars count
+        stars = info.get('stargazers_count', 0)
+        if stars >= 10000:
+            points.append(f"社区高度认可（{stars/1000:.0f}k+ stars）")
+        elif stars >= 1000:
+            points.append(f"获得广泛关注（{stars/1000:.1f}k stars）")
+        
+        # 2. Active development
+        pushed_at = info.get('pushed_at', '')
+        if pushed_at:
+            try:
+                from datetime import datetime
+                push_date = datetime.fromisoformat(pushed_at.replace('Z', '+00:00'))
+                days_since = (datetime.now().replace(tzinfo=push_date.tzinfo) - push_date).days
+                if days_since < 7:
+                    points.append("近期活跃维护（7天内更新）")
+                elif days_since < 30:
+                    points.append("持续维护（30天内更新）")
+            except:
+                pass
+        
+        # 3. Good documentation
+        if readme and len(readme) > 2000:
+            points.append("文档完善")
+        
+        # 4. Popular language
+        lang = info.get('language', '')
+        if lang:
+            points.append(f"基于 {lang} 开发")
+        
+        # 5. Many contributors
+        if info.get('forks_count', 0) > 100:
+            points.append(f"Fork 数众多（{info['forks_count']}）")
+        
+        # 6. Stable releases
+        if info.get('releases'):
+            points.append("有稳定版本发布")
+        
+        # 7. License
+        license_name = info.get('license', {}).get('spdx_id', '') if info.get('license') else ''
+        if license_name in ['MIT', 'Apache-2.0', 'BSD-3-Clause']:
+            points.append(f"宽松开源协议（{license_name}）")
+        
+        # 8. Topics indicate use cases
+        topics = info.get('topics', [])
+        if topics:
+            # Extract meaningful topics
+            use_case_topics = [t for t in topics[:3] if t not in ['python', 'javascript', 'go', 'rust', 'java']]
+            if use_case_topics:
+                points.append(f"适用场景: {', '.join(use_case_topics)}")
+        
+        return points
     
     def get_rate_limit_info(self) -> Dict:
         """Get current rate limit status."""

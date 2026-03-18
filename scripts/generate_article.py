@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from github_api import GitHubAPI, GitHubAPIError
 from llm_generator import OpenClawAgentClient, ArticleGenerator, AgentError
 from formatters import RedNoteFormatter, format_rednote_article
+from image_generator import generate_cover_image
 
 
 def generate_fallback_article(repo_data: dict, article_type: str = 'intro') -> str:
@@ -187,6 +188,17 @@ Environment Variables:
         help="Copy output to clipboard"
     )
     
+    parser.add_argument(
+        "--with-image",
+        action="store_true",
+        help="Generate RedNote cover image (requires --output)"
+    )
+    
+    parser.add_argument(
+        "--image-output",
+        help="Directory for cover image output (default: same as --output directory)"
+    )
+    
     args = parser.parse_args()
     
     # Handle list commands
@@ -230,8 +242,22 @@ Environment Variables:
             with open(args.output, 'w', encoding='utf-8') as f:
                 f.write(article)
             print(f"✓ Article saved to: {args.output}", file=sys.stderr)
+            
+            # Generate cover image if requested
+            if args.with_image:
+                image_dir = args.image_output or os.path.dirname(args.output) or "."
+                print(f"Generating cover image...", file=sys.stderr)
+                image_path = generate_cover_image(repo_data, image_dir)
+                if image_path:
+                    print(f"✓ Cover image saved to: {image_path}", file=sys.stderr)
+                else:
+                    print(f"⚠ Cover image generation failed", file=sys.stderr)
         else:
             print(article)
+            
+            # Cannot generate image without output directory
+            if args.with_image:
+                print(f"⚠ --with-image requires --output to specify output directory", file=sys.stderr)
         
         # Copy to clipboard if requested
         if args.clipboard:

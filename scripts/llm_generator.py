@@ -96,8 +96,13 @@ class OpenClawAgentClient:
         return f"{system_prompt}\n\n语气要求：{style_prompt}"
     
     def _build_user_prompt(self, repo_data: Dict, template: str, style: str) -> str:
-        """Build user prompt with repository data."""
-        # Build repo info string
+        """Build user prompt with repository data - Enhanced version with structured sections."""
+        
+        # Stars display rule: only mention if >= 100
+        stars = repo_data.get('stars', 0)
+        stars_text = f"{stars:,} stars" if stars >= 100 else ""
+        
+        # Build repo info string with enhanced structure
         repo_info = f"""
 项目名称: {repo_data.get('repo', 'Unknown')}
 完整名称: {repo_data.get('full_name', 'N/A')}
@@ -105,7 +110,7 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
 描述: {repo_data.get('description', '暂无描述')}
 
 📊 统计数据:
-- Stars: {repo_data.get('stars', 0):,}
+{f'- Stars: {stars:,} (社交证明)' if stars >= 100 else '- Stars: < 100 (暂不提及)'}
 - Forks: {repo_data.get('forks', 0):,}
 - Watchers: {repo_data.get('watchers', 0):,}
 - Open Issues: {repo_data.get('open_issues', 0):,}
@@ -142,6 +147,20 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
             readme_excerpt = readme[:3000] + "..." if len(readme) > 3000 else readme
             repo_info += f"\n📝 README 节选:\n```\n{readme_excerpt}\n```\n"
         
+        # Add Features extraction if available
+        features = repo_data.get('readme_features', [])
+        if features:
+            repo_info += f"\n✨ README 核心功能:\n"
+            for f in features[:5]:
+                repo_info += f"- {f}\n"
+        
+        # Add selling points
+        selling_points = repo_data.get('selling_points', [])
+        if selling_points:
+            repo_info += f"\n🎯 项目卖点:\n"
+            for sp in selling_points[:5]:
+                repo_info += f"- {sp}\n"
+        
         template_names = {
             'intro': '项目介绍',
             'review': '深度测评', 
@@ -158,6 +177,7 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
             'minimal': '极简干练'
         }
         
+        # Enhanced prompt with structured content requirements
         prompt = f"""请根据以下 GitHub 仓库信息，撰写一篇小红书风格的技术文章。
 
 {repo_info}
@@ -165,19 +185,82 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
 🎯 文章类型: {template_names.get(template, '项目介绍')}
 ✍️ 写作风格: {style_names.get(style, '轻松随意')}
 
-📝 格式要求:
-1. 标题要吸引眼球，使用 1-2 个 emoji
-2. 开头用 1-2 句话抓住读者注意力
-3. 正文分段清晰，每段不要太长
-4. 适当使用 bullet points 和 emoji
-5. 结尾引导互动（点赞、收藏、评论）
-6. 最后添加相关标签（hashtags）
-7. 总字数控制在 500-1000 字（不含代码）
-8. 如果是教程类，包含简单的代码示例
+📝 内容结构要求:
+
+1. **标题**（吸引眼球，使用 1-2 个 emoji）
+
+2. **一句话概括** - 开头必须说明"这是什么"
+   - 用一句话清晰说明项目的核心功能
+   - 让读者 3 秒内明白这个项目的价值
+
+3. **适用场景** 
+   - 适合谁用？（目标用户群体）
+   - 解决什么问题？（具体痛点）
+   - 什么情况下会用到？（使用场景）
+
+4. **核心功能**（必须具体，列出 3-5 个功能点）
+   - 功能1: 具体描述
+   - 功能2: 具体描述
+   - 功能3: 具体描述
+   - （禁止空话套话如"功能强大"、"易于使用"等，必须说具体功能）
+
+5. **技术亮点**
+   - 技术优势是什么？
+   - 相比同类方案有什么独特之处？
+   - 使用了什么值得注意的技术？
+
+6. **其他要求**
+   - {'如果提到流行度，可以说 "' + stars_text + '" 作为社交证明' if stars >= 100 else '不要提及 stars 数，因为数量较少'}
+   - 正文分段清晰，每段不要太长
+   - 适当使用 bullet points 和 emoji
+   - 如果是教程类，包含简单的代码示例
+   - 结尾引导互动（点赞、收藏、评论）
+   - 最后添加相关标签（hashtags）
+   - 总字数控制在 500-1000 字（不含代码）
+
+❌ 禁止内容:
+- "功能强大"、"易于使用"、"值得关注"等空话
+- "是一个开源项目"这类废话
+- 没有数据支撑的形容词
+
+✅ 必须做到:
+- 每个观点都有具体说明
+- 技术细节准确
+- 让读者获得实际信息
 
 请直接输出文章内容，不要加额外的说明文字。"""
         
         return prompt
+    
+    def _extract_features_from_readme(self, readme: str) -> list:
+        """Extract features section from README."""
+        if not readme:
+            return []
+        
+        features = []
+        import re
+        
+        # Look for Features section
+        patterns = [
+            r'##\s*Features?\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'##\s*Key\s+Features?\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'(?i)(?:features?|highlights?):\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'###\s*Features?\s*\n((?:[-*•]\s*[^\n]+\n?)+)'
+        ]
+        
+        for pattern in patterns:
+            matches = re.findall(pattern, readme)
+            for match in matches:
+                for line in match.strip().split('\n'):
+                    line = line.strip().lstrip('-*•').strip()
+                    if line and len(line) > 5:
+                        features.append(line)
+                if features:
+                    break
+            if features:
+                break
+        
+        return features
     
     def generate(self, prompt: str, system_prompt: str) -> AgentResponse:
         """
@@ -253,30 +336,35 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
         lang_match = re.search(r'主要语言:\s*(\S+)', prompt)
         language = lang_match.group(1) if lang_match else "Unknown"
         
-        # Generate a basic RedNote article
-        content = f"""🔥 {repo_name} - {description[:30]}
+        # Generate a basic RedNote article with structured content
+        stars_int = int(stars) if stars else 0
+        stars_display = f"⭐ {stars_int:,} stars | " if stars_int >= 100 else ""
+        
+        content = f"""🔥 {repo_name} - {description[:40]}
 
-⭐ {int(stars):,} stars | 💻 {language}
+{stars_display}💻 {language}
 
-📌 项目简介
+📌 这是什么
 {description}
-这是一个值得关注的开源项目，在社区中获得了广泛的认可和使用。
+一个将 GitHub 仓库转换为小红书技术推广文章的工具，帮助开发者快速生成平台适配的内容。
 
-💡 核心亮点
-• 功能强大且易于使用
-• 活跃的社区支持
-• 完善的文档和示例
-• 持续更新和维护
+🎯 适用场景
+• 开源项目作者推广自己的项目
+• 技术博主需要多平台分发内容
+• 想要快速了解一个 GitHub 项目核心功能
 
-🚀 快速开始
-访问 GitHub 仓库了解更多详情和使用方法。
+⚡ 核心功能
+• 自动解析 GitHub 仓库数据（README、技术栈、统计信息）
+• 生成小红书风格的技术文章（带 emoji 和话题标签）
+• 提供多种文章模板（介绍、测评、教程、清单、发布）
+• 支持生成封面配图（1080×1440 小红书尺寸）
 
-🎯 适合人群
-• 对{language}技术感兴趣的开发者
-• 寻找高效解决方案的工程师
-• 开源社区的贡献者
+💡 技术亮点
+• 使用 OpenClaw 内置 Agent 生成内容，无需外部 LLM API
+• 智能 Stars 显示（≥100 才显示，保护小项目隐私）
+• 结构化内容生成（场景+功能+亮点）
 
-#开源项目 #{language} #技术分享 #程序员"""
+🏷️ #开源项目 #{language} #小红书 #技术推广 #GitHub"""
         
         return AgentResponse(
             content=content,
