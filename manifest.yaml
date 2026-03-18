@@ -1,0 +1,61 @@
+name: github-to-rednote
+description: Convert GitHub repositories into RedNote style technical articles using OpenClaw's built-in agent capability
+version: 1.1.0
+author: kevin
+type: skill
+category: content-generation
+tags:
+  - github
+  - rednote
+  - xiaohongshu
+  - content
+  - article
+  - ai
+
+commands:
+  generate:
+    description: Generate RedNote article from GitHub repository using OpenClaw agent
+    usage: generate URL [--template TYPE] [--style STYLE] [--output FILE] [--clipboard]
+    args:
+      - name: url
+        required: true
+        description: GitHub repository URL
+      - name: template
+        required: false
+        default: intro
+        description: Article template (intro, review, tutorial, list, release)
+      - name: style
+        required: false
+        default: casual
+        description: Writing style (casual, professional, enthusiastic, story, minimal)
+      - name: output
+        required: false
+        description: Output file path (default stdout)
+      - name: clipboard
+        required: false
+        description: Copy output to clipboard
+
+env:
+  GITHUB_TOKEN:
+    required: true
+    description: GitHub personal access token for API access
+
+agent:
+  description: Uses OpenClaw's built-in agent capability for content generation. No external LLM API keys required.
+  capabilities:
+    - content_generation
+    - markdown_formatting
+    - chinese_technical_writing
+
+scripts:
+  - scripts/github_api.py
+  - scripts/generate_article.py
+  - scripts/formatters.py
+  - scripts/llm_generator.py
+  - scripts/test_github_api.py
+
+docs:
+  - README.md
+  - SKILL.md
+  - prompts.md
+  - rednote-style.md
