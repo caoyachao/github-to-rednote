@@ -336,35 +336,70 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
         lang_match = re.search(r'主要语言:\s*(\S+)', prompt)
         language = lang_match.group(1) if lang_match else "Unknown"
         
+        # Extract README features from prompt
+        features = []
+        readme_section = re.search(r'README 节选:\s*```\n(.*?)```', prompt, re.DOTALL)
+        if readme_section:
+            readme_text = readme_section.group(1)
+            # Look for feature bullets in README
+            feature_patterns = [
+                r'[-*•]\s*([^\n]+)',
+                r'\d+\.\s+([^\n]+)'
+            ]
+            for pattern in feature_patterns:
+                matches = re.findall(pattern, readme_text)
+                for m in matches[:5]:
+                    m_clean = m.strip().lstrip('-*•').strip()
+                    if len(m_clean) > 3 and len(m_clean) < 100:
+                        features.append(m_clean)
+                if features:
+                    break
+        
+        # Extract topics/tags
+        topics_match = re.search(r'标签:\s*(.+?)(?:\n|$)', prompt)
+        topics = []
+        if topics_match:
+            topics = [t.strip() for t in topics_match.group(1).split(',') if t.strip() and t.strip() != '无']
+        
         # Generate a basic RedNote article with structured content
         stars_int = int(stars) if stars else 0
         stars_display = f"⭐ {stars_int:,} stars | " if stars_int >= 100 else ""
         
-        content = f"""🔥 {repo_name} - {description[:40]}
+        # Build features section from extracted data or generic fallback
+        if features:
+            features_section = '\n'.join([f"• {f}" for f in features[:5]])
+        else:
+            features_section = f"• {description}\n• 使用 {language} 开发\n• 开源项目，欢迎贡献"
+        
+        # Build tags
+        tags = ['#开源项目', f'#{language}', '#GitHub']
+        for t in topics[:3]:
+            tag = t.replace(' ', '').replace('-', '')
+            if tag:
+                tags.append(f'#{tag}')
+        tags_str = ' '.join(list(dict.fromkeys(tags)))  # Remove duplicates while preserving order
+        
+        content = f"""🔥 {repo_name} - {description[:50]}
 
 {stars_display}💻 {language}
 
 📌 这是什么
 {description}
-一个将 GitHub 仓库转换为小红书技术推广文章的工具，帮助开发者快速生成平台适配的内容。
 
 🎯 适用场景
-• 开源项目作者推广自己的项目
-• 技术博主需要多平台分发内容
-• 想要快速了解一个 GitHub 项目核心功能
+• 开发者寻找相关工具和解决方案
+• 学习 {language} 和开源技术
+• 技术实践参考和代码示例
 
 ⚡ 核心功能
-• 自动解析 GitHub 仓库数据（README、技术栈、统计信息）
-• 生成小红书风格的技术文章（带 emoji 和话题标签）
-• 提供多种文章模板（介绍、测评、教程、清单、发布）
-• 支持生成封面配图（1080×1440 小红书尺寸）
+{features_section}
 
 💡 技术亮点
-• 使用 OpenClaw 内置 Agent 生成内容，无需外部 LLM API
-• 智能 Stars 显示（≥100 才显示，保护小项目隐私）
-• 结构化内容生成（场景+功能+亮点）
+• 使用 {language} 开发
+• 开源免费，社区驱动
+• 代码透明，可自由定制
 
-🏷️ #开源项目 #{language} #小红书 #技术推广 #GitHub"""
+🏷️ {tags_str}"""
         
         return AgentResponse(
             content=content,
