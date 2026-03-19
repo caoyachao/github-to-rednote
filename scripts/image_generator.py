@@ -82,34 +82,96 @@ def escape_xml(text: str) -> str:
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
 
 
-def extract_key_points(article_text: str, max_points: int = 5) -> List[str]:
-    """Extract key points from article text for image display."""
+def extract_key_points(article_text: str, max_points: int = 4) -> List[str]:
+    """Extract practical key points from article text for image display.
+    
+    Prioritizes:
+    1. Installation instructions
+    2. Usage examples/commands
+    3. Feature descriptions with specific functionality
+    4. Results/effects of using the tool
+    """
     points = []
     
-    # Look for bullet points with emojis
+    # Priority patterns for valuable content
+    priority_patterns = [
+        # Installation patterns
+        r'(?:pip install|npm install|yarn add|cargo install|go get|brew install|apt install)[^\n]+',
+        # Usage/command patterns
+        r'(?:python|npm|yarn|cargo|go|docker|kubectl)[^\n]+(?:run|start|serve|deploy|exec)[^\n]*',
+        # Feature patterns with specific actions
+        r'(?:支持|提供|可以|能够|自动|一键|快速|实时)[^\n]{5,40}',
+        # Effect/result patterns
+        r'(?:生成|输出|显示|分析|计算|导出)[^\n]{5,40}',
+    ]
+    
+    # First pass: look for high-value patterns
+    for pattern in priority_patterns:
+        matches = re.findall(pattern, article_text, re.IGNORECASE)
+        for match in matches:
+            clean = match.strip()
+            # Remove excessive emoji and normalize
+            clean = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈🟢🟡🔴⭐✨🎉]+', '', clean)
+            clean = clean.strip()
+            if len(clean) > 8 and len(clean) < 45 and clean not in points:
+                points.append(clean)
+                if len(points) >= max_points:
+                    return points
+    
+    # Second pass: look for bullet points with specific content
     bullet_pattern = r'[•\-\*]\s*([^\n]+)'
     matches = re.findall(bullet_pattern, article_text)
     
-    for match in matches[:max_points]:
-        # Clean up the text
+    for match in matches:
         clean = match.strip()
         # Remove excessive emoji
-        clean = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈🟢🟡🔴]+', '', clean)
+        clean = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈🟢🟡🔴⭐✨🎉]+', '', clean)
         clean = clean.strip()
-        if len(clean) > 5 and len(clean) < 50:
+        
+        # Skip generic/empty phrases
+        skip_patterns = [
+            r'^(OpenClaw|GitHub|开源|技术|项目|工具)',
+            r'^(学习|了解|掌握|熟悉)',
+            r'^(适用|适合|针对|面向)',
+            r'^(功能强大|易于使用|值得关注)',
+        ]
+        if any(re.match(p, clean, re.IGNORECASE) for p in skip_patterns):
+            continue
+            
+        if len(clean) > 8 and len(clean) < 45 and clean not in points:
             points.append(clean)
+            if len(points) >= max_points:
+                return points
     
-    # If no bullets found, look for feature lines
+    # Third pass: look for numbered lists
+    numbered_pattern = r'\d+\.\s*([^\n]+)'
+    matches = re.findall(numbered_pattern, article_text)
+    
+    for match in matches:
+        clean = match.strip()
+        clean = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈🟢🟡🔴⭐✨🎉]+', '', clean)
+        clean = clean.strip()
+        
+        if len(clean) > 8 and len(clean) < 45 and clean not in points:
+            points.append(clean)
+            if len(points) >= max_points:
+                return points
+    
+    # Final fallback: extract from sections
     if not points:
-        lines = article_text.split('\n')
-        for line in lines:
-            line = line.strip()
-            if line.startswith('•') or line.startswith('-') or line.startswith('*'):
-                clean = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈🟢🟡🔴]+', '', line[1:]).strip()
-                if 5 < len(clean) < 50:
+        # Look for content after specific section headers
+        section_patterns = [
+            r'(?:安装|使用|功能|特性)[：:]\s*\n?([^\n]{10,40})',
+            r'```[^`]*```',  # Code blocks
+        ]
+        for pattern in section_patterns:
+            matches = re.findall(pattern, article_text)
+            for match in matches[:2]:
+                clean = match.strip().replace('```', '')
+                if len(clean) > 8 and len(clean) < 45:
                     points.append(clean)
                     if len(points) >= max_points:
-                        break
+                        return points
     
     return points[:max_points]
 
@@ -210,11 +272,15 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
     {desc_text}
   </text>
   
-  <!-- Language badge -->
-  <rect x="440" y="540" width="200" height="50" rx="25" fill="{accent_color}"/>
-  <text x="540" y="573" font-family="Arial, sans-serif" font-size="24" 
+  <!-- OpenClaw Logo Badge -->
+  <rect x="390" y="540" width="300" height="50" rx="25" fill="{accent_color}"/>
+  <!-- Claw icon -->
+  <g transform="translate(420, 555)">
+    <path d="M5,10 Q0,5 5,0 Q10,5 5,10 M8,8 Q12,12 8,16 Q4,12 8,8" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1.5"/>
+  </g>
+  <text x="540" y="573" font-family="{chinese_font}" font-size="20" 
         font-weight="bold" fill="#FFFFFF" text-anchor="middle">
-    {lang_text}
+    OpenClaw Skill
   </text>
   
   <!-- Stars badge -->
