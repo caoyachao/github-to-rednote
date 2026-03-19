@@ -82,11 +82,11 @@ def escape_xml(text: str) -> str:
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
 
 
-def extract_key_points(article_text: str, max_points: int = 4) -> List[str]:
+def extract_key_points(article_text: str, max_points: int = 6) -> List[str]:
     """Extract key points from article text for image display.
     
     Prioritizes:
-    1. Core features section (核心功能)
+    1. Core features section (核心功能) - including sub-items
     2. Installation instructions
     3. Usage examples/commands
     4. Feature descriptions with specific functionality
@@ -94,31 +94,26 @@ def extract_key_points(article_text: str, max_points: int = 4) -> List[str]:
     points = []
     
     # First pass: extract from "核心功能" / "⚡ 核心功能" section
-    # Look for the section and extract only top-level bullet points (not sub-items)
+    # Include ALL bullet points (main items and sub-items)
     core_features_pattern = r'(?:⚡\s*)?核心功能[\s:：]*\n((?:[•\-\*]\s*[^\n]+\n?)+)'
     core_match = re.search(core_features_pattern, article_text)
     if core_match:
         content = core_match.group(1)
         lines = content.strip().split('\n')
-        for i, line in enumerate(lines):
+        for line in lines:
             line = line.strip()
-            # Only process lines that start with bullet markers at the beginning
+            # Only process lines that start with bullet markers
             if not line.startswith(('•', '-', '*')):
                 continue
-            # Check if this is a sub-item (next line is indented or this line has more indentation)
-            # Skip if next line starts with bullet (could be sub-item indicator)
             line = line.lstrip('-*•').strip()
-            # Remove markdown bold markers and emoji
+            # Remove markdown bold markers and ALL emoji including colored circles
             line = re.sub(r'\*\*([^*]+)\*\*', r'\1', line)
-            line = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈🟢🟡🔴⭐✨🎉🔍📈🎯]+', '', line)
+            line = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈⭐✨🎉🔎📉🟢🟡🔴]+', '', line)
             line = line.strip()
-            # Skip lines that look like sub-items (contain rating descriptions)
-            if re.match(r'^[🟢🟡🔴]\s*', line) or '(0-' in line or '(20-' in line:
-                continue
-            if len(line) > 8 and len(line) < 50 and line not in points:
+            if len(line) > 5 and len(line) < 55 and line not in points:
                 points.append(line)
                 if len(points) >= max_points:
-                    break
+                    return points[:max_points]
         
         # If we got points from core features, return them immediately
         if points:
@@ -227,8 +222,8 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
     desc_text = escape_xml(truncate_text(description, 80))
     lang_text = escape_xml(language)
     
-    # Extract key points from article
-    key_points = extract_key_points(article_text, 4)
+    # Extract key points from article (get up to 5 items)
+    key_points = extract_key_points(article_text, 5)
     
     # Stars display
     stars_badge = ""
@@ -236,18 +231,30 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
     if should_show_stars(stars):
         stars_formatted = format_stars(stars)
         stars_badge = f"⭐ {stars_formatted} stars"
-        stars_section = f'''<rect x="390" y="680" width="300" height="60" rx="30" fill="#FFD700"/>
-  <text x="540" y="720" font-family="Arial, sans-serif" font-size="28" 
+        stars_section = f'''<rect x="390" y="650" width="300" height="50" rx="25" fill="#FFD700"/>
+  <text x="540" y="683" font-family="Arial, sans-serif" font-size="24" 
         font-weight="bold" fill="#1a1a2e" text-anchor="middle">{stars_badge}</text>'''
     
     # Build key points section - use Chinese font
-    points_y_start = 880
+    # Adjust Y position and spacing for up to 5 items
+    points_y_start = 760
+    line_height = 55
     points_section = ""
     for i, point in enumerate(key_points):
-        y_pos = points_y_start + (i * 60)
-        escaped_point = escape_xml(truncate_text(point, 40))
-        points_section += f'''<text x="100" y="{y_pos}" font-family="WenQuanYi Zen Hei, Noto Sans CJK SC, Arial, sans-serif" 
-        font-size="28" fill="rgba(0,0,0,0.8)">• {escaped_point}</text>
+        y_pos = points_y_start + (i * line_height)
+        # Increase max length for Chinese text and add automatic line wrapping
+        escaped_point = escape_xml(point)
+        # If text is too long, split into multiple lines
+        if len(point) > 50:
+            # Try to find a good break point
+            break_point = point.rfind('，', 0, 50)
+            if break_point == -1:
+                break_point = point.rfind('、', 0, 50)
+            if break_point == -1:
+                break_point = 50
+            escaped_point = escape_xml(point[:break_point]) + '...'
+        points_section += f'''<text x="80" y="{y_pos}" font-family="WenQuanYi Zen Hei, Noto Sans CJK SC, Arial, sans-serif" 
+        font-size="25" fill="rgba(0,0,0,0.85)">• {escaped_point}</text>
 '''
     
     # If no key points, show description instead
@@ -315,9 +322,6 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
   
   <!-- Stars badge -->
   {stars_section}
-  
-  <!-- Divider line -->
-  <line x1="80" y1="800" x2="1000" y2="800" stroke="{accent_color}" stroke-width="2" opacity="0.5"/>
   
   <!-- Key points section -->
   {points_section}
