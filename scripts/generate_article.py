@@ -95,6 +95,40 @@ def generate_fallback_article(repo_data: dict, article_type: str = 'intro') -> s
     )
 
 
+def clean_article_content(article: str) -> str:
+    """Clean generated article by removing unwanted content."""
+    import re
+    
+    # Remove emoji shortcodes
+    article = re.sub(r':[a-z_]+:', '', article)
+    
+    # Remove URLs
+    article = re.sub(r'https?://\S+', '', article)
+    
+    # Remove HTML tags
+    article = re.sub(r'<[^>]+>', '', article)
+    
+    # Remove lines with only whitespace or empty
+    lines = article.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        stripped = line.strip()
+        # Skip empty lines, badge markers, license text, etc.
+        if not stripped:
+            continue
+        skip_patterns = [
+            'badges', 'start-', 'end-', 'license found', 'license file', 
+            'copyright', 'build status', 'ci.org', '.svg', ':tada:', 
+            ':fire:', ':rocket:', ':star:', '<!--', '-->', '<div', '</div>',
+            '<img', '<svg', '<span', '</span>', '</svg>', '<p>', '</p>'
+        ]
+        if any(marker in stripped.lower() for marker in skip_patterns):
+            continue
+        cleaned_lines.append(line)
+    
+    return '\n'.join(cleaned_lines)
+
+
 def generate_article(repo_data: dict, template: str = 'intro',
                      style: str = 'casual') -> str:
     """
@@ -115,7 +149,10 @@ def generate_article(repo_data: dict, template: str = 'intro',
         generator = ArticleGenerator(client)
         
         print(f"  Using OpenClaw agent for content generation", file=sys.stderr)
-        return generator.generate(repo_data, template=template, style=style)
+        article = generator.generate(repo_data, template=template, style=style)
+        
+        # Clean the generated article
+        return clean_article_content(article)
             
     except (AgentError, ValueError) as e:
         print(f"  Agent generation failed: {e}", file=sys.stderr)

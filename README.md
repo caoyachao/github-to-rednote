@@ -1,4 +1,4 @@
-# GitHub to RedNote v1.6.1 🚀
+# GitHub to RedNote v1.6.2 🚀
 
 将 GitHub 仓库一键转换为小红书风格的技术文章，支持自动生成封面图。
 
@@ -325,6 +325,15 @@ python3 image_generator.py
 - **输出格式** - 小红书风格 Markdown
 
 ## 变更日志
+
+### v1.6.2 (2026-03-19)
+- 🐛 **修复HTML注释过滤** - 过滤 `<!-- start-badges -->` 等HTML注释
+- 🐛 **修复Badge链接过滤** - 过滤 shields.io badge链接
+- 🐛 **修复emoji shortcode过滤** - 过滤 `:tada:`, `:fire:` 等emoji标记
+- 🐛 **修复HTML标签过滤** - 过滤 `<div>`, `<img>`, `<svg>` 等HTML标签
+- 🐛 **修复LICENSE内容过滤** - 过滤 "license found" 等版权文本
+- 🐛 **修复URL过滤** - 过滤文章内容中的URL
+- 🐛 **修复片段过滤** - 过滤不完整的句子片段
 
 ### v1.6.1 (2026-03-19)
 - 🐛 **修复图片排版** - 移除与文字重叠的分割线

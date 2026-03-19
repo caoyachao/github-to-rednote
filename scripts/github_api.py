@@ -599,11 +599,22 @@ class GitHubAPI:
                 content = match[0] if isinstance(match, tuple) else match
                 for line in content.strip().split('\n'):
                     line = line.strip().lstrip('-*•').strip()
+                    # Skip HTML comments, badges, and non-content lines
+                    skip_markers = ['<!--', '-->', '<!', 'badges', 'start-', 'end-', 'http://', 'https://', '.md)', '.txt)', '.json)', '.yaml)', '.yml)', '<div', '<img', '<svg', '<span', 'license found', 'license file', 'copyright', '©', 'build status', 'ci.org', '.svg"', ':tada:', ':fire:', ':rocket:', ':star:']
+                    if any(marker in line.lower() for marker in skip_markers):
+                        continue
+                    # Skip lines containing HTML tags
+                    if re.search(r'<[^>]+>', line):
+                        continue
+                    # Skip markdown badge links
+                    if '](' in line and ('http' in line or '.md' in line or '.txt' in line):
+                        continue
+                    # Clean markdown links - keep only text
+                    line = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)
+                    # Clean inline code markers
+                    line = re.sub(r'`([^`]+)`', r'\1', line)
+                    line = line.strip()
                     if line and len(line) > 5 and len(line) < 200:
-                        # Clean markdown links
-                        line = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)
-                        # Clean inline code markers
-                        line = re.sub(r'`([^`]+)`', r'\1', line)
                         features.append(line)
                 if features:
                     break

@@ -144,7 +144,15 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
         # Add README excerpt
         readme = repo_data.get('readme', '')
         if readme:
-            readme_excerpt = readme[:3000] + "..." if len(readme) > 3000 else readme
+            # Filter out HTML comments and badge sections
+            import re
+            # Remove HTML comments
+            readme_filtered = re.sub(r'<!--.*?-->', '', readme, flags=re.DOTALL)
+            # Remove badge link lines
+            readme_filtered = re.sub(r'\[.*?\]\(https?://.*?\)\n?', '', readme_filtered)
+            # Remove emoji shortcodes like :tada: :fire:
+            readme_filtered = re.sub(r':[a-z_]+:', '', readme_filtered)
+            readme_excerpt = readme_filtered[:3000] + "..." if len(readme_filtered) > 3000 else readme_filtered
             repo_info += f"\n📝 README 节选:\n```\n{readme_excerpt}\n```\n"
         
         # Add Features extraction if available
@@ -199,10 +207,14 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
    - 什么情况下会用到？（使用场景）
 
 4. **核心功能**（必须具体，列出 3-5 个功能点）
-   - 功能1: 具体描述
-   - 功能2: 具体描述
-   - 功能3: 具体描述
-   - （禁止空话套话如"功能强大"、"易于使用"等，必须说具体功能）
+   - 如果README中有"Features"或"功能特点"章节，提取其中的具体功能点
+   - 如果没有明确的功能列表，基于项目描述生成合理的功能点
+   - 禁止从README中提取：HTML注释、Badge链接、文件路径、不完整的句子片段
+   - 每个功能点必须有具体描述，不能是单个词或片段
+   - 示例格式：
+     - 功能1: 具体描述
+     - 功能2: 具体描述
+   - 如无法提取有效功能点，可省略此章节
 
 5. **技术亮点**
    - 技术优势是什么？
@@ -222,6 +234,9 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
 - "功能强大"、"易于使用"、"值得关注"等空话
 - "是一个开源项目"这类废话
 - 没有数据支撑的形容词
+- HTML注释（如 <!-- xxx -->）
+- Badge链接（如 [![License]...] 这类shields.io链接）
+- 文件路径或URL作为功能点
 
 ✅ 必须做到:
 - 每个观点都有具体说明
@@ -253,6 +268,18 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
             for match in matches:
                 for line in match.strip().split('\n'):
                     line = line.strip().lstrip('-*•').strip()
+                    # Skip HTML comments, badges, and non-content lines
+                    skip_markers = ['<!--', '-->', '<!', 'badges', 'start-', 'end-', 'http://', 'https://', '.md)', '.txt)', '.json)', '.yaml)']
+                    if any(marker in line.lower() for marker in skip_markers):
+                        continue
+                    # Skip markdown badge links
+                    if '](' in line and ('http' in line or '.md' in line):
+                        continue
+                    # Clean up markdown links - keep only text
+                    line = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)
+                    # Clean up bold markers
+                    line = re.sub(r'\*\*([^*]+)\*\*', r'\1', line)
+                    line = line.strip()
                     if line and len(line) > 5:
                         features.append(line)
                 if features:
@@ -350,6 +377,22 @@ GitHub URL: {repo_data.get('html_url', repo_data.get('url', ''))}
                 matches = re.findall(pattern, readme_text)
                 for m in matches[:5]:
                     m_clean = m.strip().lstrip('-*•').strip()
+                    # Skip HTML comments, badges, file paths, and fragments
+                    skip_markers = ['<!--', '-->', '<!', 'badges', 'start-', 'end-', 'http://', 'https://', '.md)', '.txt)', '.json)', '.yaml)', '.yml)', '<div', '<img', '<svg', '<span', '<p>', '</div>', '</p>', '</span>', '</svg>', 'license found', 'license file', 'copyright', '©', 'build status', 'ci.org', '.svg"', ':tada:', ':fire:', ':rocket:', ':star:']
+                    if any(marker in m_clean.lower() for marker in skip_markers):
+                        continue
+                    # Skip lines containing HTML tags
+                    if re.search(r'<[^>]+>', m_clean):
+                        continue
+                    # Skip short lines or fragments
+                    if len(m_clean) < 10 or m_clean.count(' ') < 2:
+                        continue
+                    # Skip lines ending with file extensions
+                    if any(m_clean.lower().endswith(ext) for ext in ['.md', '.txt', '.json', '.yaml', '.yml']):
+                        continue
+                    # Skip lines with ** or fragment patterns
+                    if m_clean.endswith('**') or (m_clean.endswith('.') and len(m_clean) < 20):
+                        continue
                     if len(m_clean) > 3 and len(m_clean) < 100:
                         features.append(m_clean)
                 if features:

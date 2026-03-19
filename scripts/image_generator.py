@@ -106,9 +106,31 @@ def extract_key_points(article_text: str, max_points: int = 6) -> List[str]:
             if not line.startswith(('•', '-', '*')):
                 continue
             line = line.lstrip('-*•').strip()
-            # Remove markdown bold markers and ALL emoji including colored circles
+            # Skip HTML comments, markers, and non-content lines
+            if any(marker in line.lower() for marker in ['<!--', '-->', '<!', 'badges', 'start-', 'end-', 'http://', 'https://', 'github.com/', '<div', '<img', '<svg', '<span', 'license found', 'license file', 'copyright', '©', 'build status', 'ci.org', '.svg"', ':tada:', ':fire:', ':rocket:', ':star:']):
+                continue
+            # Skip lines containing HTML tags
+            if re.search(r'<[^>]+>', line):
+                continue
+            # Skip lines ending with file extensions
+            if any(line.lower().endswith(ext) for ext in ['.md)', '.txt)', '.json)', '.yaml)', '.yml)', '.md', '.txt', '.json', '.yaml', '.yml']):
+                continue
+            # Skip very short lines or lines that look like fragments
+            if len(line) < 10 or line.count(' ') < 2:
+                continue
+            # Skip lines with common fragment patterns
+            if line.endswith('**') or line.endswith('.') and len(line) < 15:
+                continue
+            # Skip markdown link syntax entirely
+            if '](' in line and ('http' in line or '.md' in line or '.txt' in line):
+                continue
+            # Remove markdown bold markers and ALL emoji including colored circles and shortcodes
             line = re.sub(r'\*\*([^*]+)\*\*', r'\1', line)
             line = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈⭐✨🎉🔎📉🟢🟡🔴]+', '', line)
+            # Remove emoji shortcodes like :tada: :fire:
+            line = re.sub(r':[a-z_]+:', '', line)
+            # Clean up any remaining artifacts
+            line = re.sub(r'\[|\]', '', line)  # Remove brackets
             line = line.strip()
             if len(line) > 5 and len(line) < 55 and line not in points:
                 points.append(line)
@@ -213,6 +235,11 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
     
     repo_name = repo_data.get('repo', 'Unknown')
     description = repo_data.get('description', '')
+    # Clean description - remove emoji shortcodes and URLs
+    description = re.sub(r':[a-z_]+:', '', description)
+    description = re.sub(r'https?://\S+', '', description)
+    description = description.strip()
+    
     language = repo_data.get('language', 'Unknown') or 'Unknown'
     stars = repo_data.get('stars', 0)
     github_url = repo_data.get('url', '') or f"github.com/{repo_data.get('owner', '')}/{repo_name}"
