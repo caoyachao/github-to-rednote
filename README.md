@@ -1,4 +1,4 @@
-# GitHub to RedNote v1.2.0 🚀
+# GitHub to RedNote v1.6.0 🚀
 
 将 GitHub 仓库一键转换为小红书风格的技术文章，支持自动生成封面图。
 
