@@ -191,6 +191,7 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
     description = repo_data.get('description', '')
     language = repo_data.get('language', 'Unknown') or 'Unknown'
     stars = repo_data.get('stars', 0)
+    github_url = repo_data.get('url', '') or f"github.com/{repo_data.get('owner', '')}/{repo_name}"
     
     # Escape XML special chars
     display_name = escape_xml(truncate_text(repo_name, 22))
@@ -292,13 +293,19 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
   <!-- Key points section -->
   {points_section}
   
+  <!-- GitHub URL -->
+  <text x="540" y="1220" font-family="Courier New, monospace" 
+        font-size="20" fill="{accent_color}" text-anchor="middle">
+    {github_url}
+  </text>
+  
   <!-- Bottom decoration -->
-  <line x1="80" y1="1280" x2="1000" y2="1280" stroke="{accent_color}" stroke-width="2" opacity="0.5"/>
+  <line x1="80" y1="1250" x2="1000" y2="1250" stroke="{accent_color}" stroke-width="2" opacity="0.5"/>
   
   <!-- Code decoration -->
-  <text x="80" y="1330" font-family="Courier New, monospace" 
+  <text x="80" y="1300" font-family="Courier New, monospace" 
         font-size="22" fill="rgba(0,0,0,0.3)">const awesome = true;</text>
-  <text x="80" y="1365" font-family="Courier New, monospace" 
+  <text x="80" y="1335" font-family="Courier New, monospace" 
         font-size="22" fill="rgba(0,0,0,0.3)">#GitHub #OpenSource</text>
   
   <!-- Corner decoration -->
