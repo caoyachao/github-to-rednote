@@ -83,17 +83,48 @@ def escape_xml(text: str) -> str:
 
 
 def extract_key_points(article_text: str, max_points: int = 4) -> List[str]:
-    """Extract practical key points from article text for image display.
+    """Extract key points from article text for image display.
     
     Prioritizes:
-    1. Installation instructions
-    2. Usage examples/commands
-    3. Feature descriptions with specific functionality
-    4. Results/effects of using the tool
+    1. Core features section (核心功能)
+    2. Installation instructions
+    3. Usage examples/commands
+    4. Feature descriptions with specific functionality
     """
     points = []
     
-    # Priority patterns for valuable content
+    # First pass: extract from "核心功能" / "⚡ 核心功能" section
+    # Look for the section and extract only top-level bullet points (not sub-items)
+    core_features_pattern = r'(?:⚡\s*)?核心功能[\s:：]*\n((?:[•\-\*]\s*[^\n]+\n?)+)'
+    core_match = re.search(core_features_pattern, article_text)
+    if core_match:
+        content = core_match.group(1)
+        lines = content.strip().split('\n')
+        for i, line in enumerate(lines):
+            line = line.strip()
+            # Only process lines that start with bullet markers at the beginning
+            if not line.startswith(('•', '-', '*')):
+                continue
+            # Check if this is a sub-item (next line is indented or this line has more indentation)
+            # Skip if next line starts with bullet (could be sub-item indicator)
+            line = line.lstrip('-*•').strip()
+            # Remove markdown bold markers and emoji
+            line = re.sub(r'\*\*([^*]+)\*\*', r'\1', line)
+            line = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈🟢🟡🔴⭐✨🎉🔍📈🎯]+', '', line)
+            line = line.strip()
+            # Skip lines that look like sub-items (contain rating descriptions)
+            if re.match(r'^[🟢🟡🔴]\s*', line) or '(0-' in line or '(20-' in line:
+                continue
+            if len(line) > 8 and len(line) < 50 and line not in points:
+                points.append(line)
+                if len(points) >= max_points:
+                    break
+        
+        # If we got points from core features, return them immediately
+        if points:
+            return points[:max_points]
+    
+    # Second pass: look for high-value patterns if core features not found
     priority_patterns = [
         # Installation patterns
         r'(?:pip install|npm install|yarn add|cargo install|go get|brew install|apt install)[^\n]+',
@@ -105,12 +136,10 @@ def extract_key_points(article_text: str, max_points: int = 4) -> List[str]:
         r'(?:生成|输出|显示|分析|计算|导出)[^\n]{5,40}',
     ]
     
-    # First pass: look for high-value patterns
     for pattern in priority_patterns:
         matches = re.findall(pattern, article_text, re.IGNORECASE)
         for match in matches:
             clean = match.strip()
-            # Remove excessive emoji and normalize
             clean = re.sub(r'[🔥💡⚡️🚀📌🎯💻📊🔍📈🟢🟡🔴⭐✨🎉]+', '', clean)
             clean = clean.strip()
             if len(clean) > 8 and len(clean) < 45 and clean not in points:
@@ -118,7 +147,7 @@ def extract_key_points(article_text: str, max_points: int = 4) -> List[str]:
                 if len(points) >= max_points:
                     return points
     
-    # Second pass: look for bullet points with specific content
+    # Third pass: look for bullet points with specific content
     bullet_pattern = r'[•\-\*]\s*([^\n]+)'
     matches = re.findall(bullet_pattern, article_text)
     
