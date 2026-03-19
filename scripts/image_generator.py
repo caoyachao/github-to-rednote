@@ -16,21 +16,21 @@ from typing import Optional, Dict, List
 COVER_WIDTH = 1080
 COVER_HEIGHT = 1440
 
-# Color schemes for different languages/tech stacks
+# Color schemes for different languages/tech stacks (Light theme)
 COLOR_SCHEMES = {
-    'python': {'bg': '#306998', 'accent': '#FFD43B', 'text': '#FFFFFF'},
-    'javascript': {'bg': '#F7DF1E', 'accent': '#323330', 'text': '#323330'},
-    'typescript': {'bg': '#3178C6', 'accent': '#FFFFFF', 'text': '#FFFFFF'},
-    'go': {'bg': '#00ADD8', 'accent': '#CE3262', 'text': '#FFFFFF'},
-    'rust': {'bg': '#CE422B', 'accent': '#000000', 'text': '#FFFFFF'},
-    'java': {'bg': '#007396', 'accent': '#F8981D', 'text': '#FFFFFF'},
-    'cpp': {'bg': '#00599C', 'accent': '#FFFFFF', 'text': '#FFFFFF'},
-    'c': {'bg': '#A8B9CC', 'accent': '#283593', 'text': '#283593'},
-    'ruby': {'bg': '#CC342D', 'accent': '#FFFFFF', 'text': '#FFFFFF'},
-    'php': {'bg': '#777BB4', 'accent': '#000000', 'text': '#FFFFFF'},
-    'swift': {'bg': '#F05138', 'accent': '#FFFFFF', 'text': '#FFFFFF'},
-    'kotlin': {'bg': '#7F52FF', 'accent': '#FFFFFF', 'text': '#FFFFFF'},
-    'default': {'bg': '#1a1a2e', 'accent': '#e94560', 'text': '#FFFFFF'}
+    'python': {'bg': '#E8F4F8', 'accent': '#306998', 'text': '#1a1a2e', 'secondary': '#FFD43B'},
+    'javascript': {'bg': '#FFF9E6', 'accent': '#F7DF1E', 'text': '#323330', 'secondary': '#F7DF1E'},
+    'typescript': {'bg': '#E8F1FA', 'accent': '#3178C6', 'text': '#1a1a2e', 'secondary': '#3178C6'},
+    'go': {'bg': '#E6F7FA', 'accent': '#00ADD8', 'text': '#1a1a2e', 'secondary': '#CE3262'},
+    'rust': {'bg': '#FFE8E6', 'accent': '#CE422B', 'text': '#1a1a2e', 'secondary': '#CE422B'},
+    'java': {'bg': '#E8F4F8', 'accent': '#007396', 'text': '#1a1a2e', 'secondary': '#F8981D'},
+    'cpp': {'bg': '#E6EEFA', 'accent': '#00599C', 'text': '#1a1a2e', 'secondary': '#00599C'},
+    'c': {'bg': '#F0F4F8', 'accent': '#A8B9CC', 'text': '#1a1a2e', 'secondary': '#283593'},
+    'ruby': {'bg': '#FFE8E8', 'accent': '#CC342D', 'text': '#1a1a2e', 'secondary': '#CC342D'},
+    'php': {'bg': '#F0E8F8', 'accent': '#777BB4', 'text': '#1a1a2e', 'secondary': '#777BB4'},
+    'swift': {'bg': '#FFE8E6', 'accent': '#F05138', 'text': '#1a1a2e', 'secondary': '#F05138'},
+    'kotlin': {'bg': '#F0E8FF', 'accent': '#7F52FF', 'text': '#1a1a2e', 'secondary': '#7F52FF'},
+    'default': {'bg': '#F8F9FA', 'accent': '#e94560', 'text': '#1a1a2e', 'secondary': '#e94560'}
 }
 
 
@@ -155,24 +155,29 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
         y_pos = points_y_start + (i * 60)
         escaped_point = escape_xml(truncate_text(point, 40))
         points_section += f'''<text x="100" y="{y_pos}" font-family="WenQuanYi Zen Hei, Noto Sans CJK SC, Arial, sans-serif" 
-        font-size="28" fill="rgba(255,255,255,0.9)">• {escaped_point}</text>
+        font-size="28" fill="rgba(0,0,0,0.8)">• {escaped_point}</text>
 '''
     
     # If no key points, show description instead
     if not points_section:
         points_section = f'''<text x="540" y="900" font-family="WenQuanYi Zen Hei, Noto Sans CJK SC, Arial, sans-serif" 
-        font-size="28" fill="rgba(255,255,255,0.85)" text-anchor="middle">{desc_text}</text>'''
+        font-size="28" fill="rgba(0,0,0,0.7)" text-anchor="middle">{desc_text}</text>'''
     
     # Font family for Chinese text
     chinese_font = "WenQuanYi Zen Hei, Noto Sans CJK SC, Arial, sans-serif"
+    
+    # Light theme colors
+    text_color = colors['text']
+    accent_color = colors['accent']
+    bg_color = colors['bg']
     
     svg_content = f'''<?xml version="1.0" encoding="UTF-8"?>
 <svg width="{COVER_WIDTH}" height="{COVER_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:{colors['bg']};stop-opacity:1" />
-      <stop offset="50%" style="stop-color:#16213e;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0f0f23;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:{bg_color};stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:{bg_color};stop-opacity:1" />
     </linearGradient>
   </defs>
   
@@ -180,35 +185,35 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
   <rect width="100%" height="100%" fill="url(#bgGrad)"/>
   
   <!-- Subtle grid pattern -->
-  <g stroke="rgba(255,255,255,0.02)" stroke-width="1">
+  <g stroke="rgba(0,0,0,0.05)" stroke-width="1">
     {' '.join([f'<line x1="{i}" y1="0" x2="{i}" y2="{COVER_HEIGHT}"/>' for i in range(40, COVER_WIDTH, 80)])}
     {' '.join([f'<line x1="0" y1="{i}" x2="{COVER_WIDTH}" y2="{i}"/>' for i in range(40, COVER_HEIGHT, 80)])}
   </g>
   
   <!-- Top accent line -->
-  <rect x="60" y="80" width="120" height="6" fill="{colors['accent']}"/>
+  <rect x="60" y="80" width="120" height="6" fill="{accent_color}" rx="3"/>
   
   <!-- GitHub icon circle -->
-  <circle cx="180" cy="200" r="70" fill="rgba(255,255,255,0.1)"/>
-  <circle cx="180" cy="210" r="45" fill="{colors['accent']}"/>
-  <circle cx="180" cy="220" r="30" fill="{colors['bg']}"/>
+  <circle cx="180" cy="200" r="70" fill="rgba(0,0,0,0.05)"/>
+  <circle cx="180" cy="210" r="45" fill="{accent_color}"/>
+  <circle cx="180" cy="220" r="30" fill="{bg_color}"/>
   
   <!-- Main title -->
   <text x="540" y="400" font-family="{chinese_font}" 
-        font-size="64" font-weight="bold" fill="{colors['text']}" text-anchor="middle">
+        font-size="64" font-weight="bold" fill="{text_color}" text-anchor="middle">
     {display_name}
   </text>
   
   <!-- Description subtitle -->
   <text x="540" y="480" font-family="{chinese_font}" 
-        font-size="28" fill="rgba(255,255,255,0.7)" text-anchor="middle">
+        font-size="28" fill="rgba(0,0,0,0.6)" text-anchor="middle">
     {desc_text}
   </text>
   
   <!-- Language badge -->
-  <rect x="440" y="540" width="200" height="50" rx="25" fill="{colors['accent']}"/>
+  <rect x="440" y="540" width="200" height="50" rx="25" fill="{accent_color}"/>
   <text x="540" y="573" font-family="Arial, sans-serif" font-size="24" 
-        font-weight="bold" fill="{'#1a1a2e' if colors['text'] == '#FFFFFF' else colors['text']}" text-anchor="middle">
+        font-weight="bold" fill="#FFFFFF" text-anchor="middle">
     {lang_text}
   </text>
   
@@ -216,23 +221,23 @@ def generate_svg_cover(repo_data: dict, output_path: str, article_text: str = ""
   {stars_section}
   
   <!-- Divider line -->
-  <line x1="80" y1="800" x2="1000" y2="800" stroke="{colors['accent']}" stroke-width="2"/>
+  <line x1="80" y1="800" x2="1000" y2="800" stroke="{accent_color}" stroke-width="2" opacity="0.5"/>
   
   <!-- Key points section -->
   {points_section}
   
   <!-- Bottom decoration -->
-  <line x1="80" y1="1280" x2="1000" y2="1280" stroke="{colors['accent']}" stroke-width="2"/>
+  <line x1="80" y1="1280" x2="1000" y2="1280" stroke="{accent_color}" stroke-width="2" opacity="0.5"/>
   
   <!-- Code decoration -->
   <text x="80" y="1330" font-family="Courier New, monospace" 
-        font-size="22" fill="rgba(255,255,255,0.3)">const awesome = true;</text>
+        font-size="22" fill="rgba(0,0,0,0.3)">const awesome = true;</text>
   <text x="80" y="1365" font-family="Courier New, monospace" 
-        font-size="22" fill="rgba(255,255,255,0.3)">#GitHub #OpenSource</text>
+        font-size="22" fill="rgba(0,0,0,0.3)">#GitHub #OpenSource</text>
   
   <!-- Corner decoration -->
-  <circle cx="980" cy="1340" r="35" fill="{colors['accent']}"/>
-  <circle cx="980" cy="1340" r="22" fill="{colors['bg']}"/>
+  <circle cx="980" cy="1340" r="35" fill="{accent_color}" opacity="0.8"/>
+  <circle cx="980" cy="1340" r="22" fill="{bg_color}"/>
 </svg>'''
     
     # Save SVG
