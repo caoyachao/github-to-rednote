@@ -247,7 +247,7 @@ Environment Variables:
             if args.with_image:
                 image_dir = args.image_output or os.path.dirname(args.output) or "."
                 print(f"Generating cover image...", file=sys.stderr)
-                image_path = generate_cover_image(repo_data, image_dir)
+                image_path = generate_cover_image(repo_data, image_dir, article)
                 if image_path:
                     print(f"✓ Cover image saved to: {image_path}", file=sys.stderr)
                 else:
