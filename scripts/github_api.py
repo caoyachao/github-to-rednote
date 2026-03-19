@@ -566,23 +566,29 @@ class GitHubAPI:
         }
     
     def _extract_readme_features(self, readme: str) -> List[str]:
-        """Extract Features section from README."""
+        """Extract Features section from README (supports English and Chinese)."""
         if not readme:
             return []
         
         features = []
         
-        # Common patterns for Features section
+        # Common patterns for Features section (English + Chinese)
         patterns = [
-            # ## Features
+            # English patterns
             r'##\s*Features?\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
-            # ## Key Features
             r'##\s*Key\s+Features?\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
-            # ### Features
             r'###\s*Features?\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
-            # Features: followed by list
             r'(?i)^\s*features?:\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
-            # - Feature: description
+            # Chinese patterns - 功能特点/功能特性/特性/功能 (with optional emoji)
+            r'##\s*(?:✨\s*)?功能特点\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'##\s*(?:✨\s*)?功能特性\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'##\s*(?:✨\s*)?特性\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'##\s*(?:✨\s*)?功能\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'###\s*(?:✨\s*)?功能特点\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'###\s*(?:✨\s*)?功能特性\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'###\s*(?:✨\s*)?特性\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            r'###\s*(?:✨\s*)?功能\s*\n((?:[-*•]\s*[^\n]+\n?)+)',
+            # Bullet pattern with Chinese feature descriptions
             r'(?i)^\s*[-*]\s*([^\n:]+):\s*[^\n]+\n((?:\s+[-*]\s*[^\n]+\n?)*)',
         ]
         
